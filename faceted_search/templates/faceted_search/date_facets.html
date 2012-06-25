@@ -1,0 +1,29 @@
+{% load faceted_search_extras %}
+{% spaceless %}
+{% for facet in facets %}
+{% if facet.has_active %}
+    <div id='facet-{{facet.field}}' class='facet-group{% if facet.has_selected %} selected{% endif %} count-{{facet|length}}'>
+        <h4>{{ facet.label }}</h4>
+        {% regroup facet.items by year as year_list %}
+        {% for year in year_list %}
+        <div class='year-group' id='year-{{ year.grouper }}'>
+            <strong>{{ year.grouper }}</strong>
+            <ul>
+                {% for item in year.list %}
+                    {% ifequal item.count 0 %}
+                        <li class='zero'>{{item.label}}<span>({{item.count}})</li>
+                     {% else %}
+                        {% if item.is_selected %}
+                            <li class='selected'><a href='{{ item.url }}'>{{item.label}} <span>({{item.count}})</span></a></li>
+                        {% else %}
+                            <li><a href='{{ item.url }}'>{{item.label}} <span>({{item.count}})</span></a></li>
+                        {% endif %}
+                    {%endifequal%} 
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endfor %}           
+{% endspaceless %}

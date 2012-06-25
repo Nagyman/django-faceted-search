@@ -1,0 +1,14 @@
+{% load faceted_search_extras %}
+{% for item in facet.items %}
+     {% ifequal item.count 0 %}
+         {% comment %}
+            <li class='zero'>{{item.label}}<span>({{item.count}})</li>
+         {% endcomment %}
+     {% else %}
+        {% if item.is_selected %}
+            <li class='selected'><a href='{{ item.url }}'>{{item.label}} <span>({{item.count}})</span></a></li>
+        {% else %}
+            <li><a href='{{item.url}}'>{{item.label}} <span>({{item.count}})</span></a></li>
+        {% endif %}
+    {%endifequal%}
+{% endfor %}

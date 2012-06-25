@@ -1,0 +1,22 @@
+{% load faceted_search_extras %}
+{% spaceless %}
+{% for facet in facets %}
+{% if facet.has_active %}
+    <div id='facet-{{facet.field}}' class='facet-group{% if facet.has_selected %} selected{% endif %} count-{{facet|length}} clearfix'>
+        <label for='id_{{facet.field}}_select'>{{ facet.label }}</label>
+        <select name='{{facet.field}}' id='id_{{facet.field}}_select'>
+            <option value=''>All {{ facet.label_plural }}</option>
+            {% for item in facet.items %}
+                 {% if item.count > 0 %}
+                    {% if item.is_selected %}
+                        <option selected='selected' value='{{item.value}}'>{{item.label}}</option>
+                    {% else %}
+                        <option value='{{item.value}}'>{{item.label}}</option>
+                    {% endif %}
+                {%endif%}
+            {% endfor %}                
+        </select>
+    </div>
+{% endif %}
+{% endfor %}
+{% endspaceless %}

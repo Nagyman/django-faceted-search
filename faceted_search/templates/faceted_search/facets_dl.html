@@ -1,0 +1,23 @@
+{% load faceted_search_extras %}
+{% spaceless %}
+{% for facet in facets %}
+{% if facet.has_active %}
+    <dl id='facet-{{facet.field}}' class='facet-group{% if facet.has_selected %} selected{% endif %} count-{{facet|length}}'>
+        <dt><a>{{ facet.label }}</a></dt>
+        <dd>
+            <ul>
+            {% for item in facet.items %}
+                 {% if item.count > 0 %}
+                    {% if item.is_selected %}
+                        <li class='selected'><a href='{{ item.url }}'>{{item.label}} <span>({{item.count}})</span></a></li>
+                    {% else %}
+                        <li><a href='{{item.url}}'>{{item.label}} <span>({{item.count}})</span></a></li>
+                    {% endif %}
+                {%endif%}
+            {% endfor %}    
+            </ul>
+        </dd>
+    </dl>
+{% endif %}
+{% endfor %}
+{% endspaceless %}
