@@ -40,6 +40,21 @@ def show_facets_as_dl(facet_list, facet_field=None, sort_by=None):
 def show_date_facets(facets, facet_field=None):
     return show_facets(facets, facet_field=facet_field, sort_by='value')
 
+@register.inclusion_tag("faceted_search/price_facets.html", takes_context=True)
+def show_price_facets(context, facet_list, facet_field=None, sort_by=None):
+    '''
+    A widget for showing price range selection in faceted search
+    '''
+    tag_context = show_facets(facet_list, facet_field, sort_by)
+    
+    tag_context.update({
+        'currency': context['currency'],
+        'slider_max': settings.PRICE_FACET_MAX,
+        'price_field': ''.join((settings.PRICE_FACET_ROOT,'_',context['currency'].code,)),
+    })
+
+    return tag_context
+
 @register.inclusion_tag("faceted_search/facet_counts.html")
 def show_facet_items(facet):
     return { 'facet': facet }

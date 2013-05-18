@@ -56,7 +56,7 @@ class Searcher(object):
         order_by
             the sort order of the results (a field name)
         '''
-        logger.debug(filters)
+        logger.debug("Searching with filters %s" % filters)
         self.filters = filters or {}
         self.cleaned_filters = self._clean_filters(self.filters)
         self.queryset = SearchQuerySet()
@@ -137,7 +137,7 @@ class Searcher(object):
         facets = self._parse_field_facets(facet_counts.get('fields', {}))
         facets = facets + self._parse_query_facets(facet_counts.get('queries', {}))
         facets = facets + self._parse_date_facets(facet_counts.get('dates', {}))
-
+        
         extra_params = {}
         if self.keywords:
             extra_params[KEYWORD_PARAM] = self.keywords
@@ -250,7 +250,8 @@ class Searcher(object):
                     item.value=date.strftime("%Y-01") 
                 item.is_selected = self._is_selected_facet(field, check_parse_date(item.value))
                 item.facet = facet
-                facet.items.append(item)                 
+                facet.items.append(item)
+            facet.items.sort(key=lambda x: x.value)
             facets.append(facet)
         return facets
 
@@ -342,11 +343,13 @@ class Searcher(object):
                                     
     def _solr_escape_value(self, value):
         '''
-        Solr needs spaces escaped with a backslash
+        Escape Solr special characters
         '''
         # ranges shouldn't have spaces escaped
         if '[' in value: return value
-            
-        escaped = value.replace(' ', r'\ ')
-        return escaped  
 
+        ESCAPE_CHARS_RE = re.compile(r'(?<!\\)(?P<char>[&|+\-!(){}[\]^ "~*?:])')
+
+        escaped = ESCAPE_CHARS_RE.sub(r'\\\g<char>', value)
+
+        return escaped

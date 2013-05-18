@@ -1,8 +1,14 @@
+import re
+import logging
+
+from collections import OrderedDict
 from urllib import urlencode
 from django.conf import settings
 from django.utils.safestring import mark_safe
+
+from currencies.models import Currency
+from faceted_search.utils import is_valid_date_range, parse_date_range
                       
-import logging
 logger = logging.getLogger(__name__)
 
 FACET_SORT_ORDER = getattr(settings, 'FACET_SORT_ORDER', [])
@@ -55,26 +61,28 @@ class FacetList(object):
         '''
         return any(f.has_active() for f in self.facets)   
  
-    def url_param(self, facet_item=None):
+    def url_param(self, facet_item=None, include_facet_item=True):
         '''
         Return a url parameter for the given facet item which
         may be used to filter current results.
-
-        TODO: merge similar facet_items under one field?
-              alphabetize parameters for canonical links
         '''
-        param = {}
+        param = OrderedDict()
         if self.extra_params:
             param = self.extra_params.copy()
+        
+        for item in self.selected_facet_items():
+            if item == facet_item and not include_facet_item:
+                # Our facet item could be selected so exclude it if we are told to
+                continue
 
-        for facet in self.facets:
-            for item in facet.items:
-                if item == facet_item and item.is_selected:
-                    continue
-                if (item.is_selected or item == facet_item) and facet.field not in self.exclude_params:
-                    param.update({facet.field: item.value})
-        #encode to utf-8 for urlencode doesn't shit the bed
-        return urlencode(dict([k, v.encode('utf-8')] for k, v in param.items()))
+            if item.facet.field not in self.exclude_params:
+                param.update({item.facet.field: item.value})
+
+        # This is to capture a facet_item that may not be part of our selected items
+        if isinstance(facet_item, FacetItem) and include_facet_item and facet_item.facet.field not in self.exclude_params:
+            param.update({facet_item.facet.field: facet_item.value})
+
+        return urlencode(OrderedDict([k, v.encode('utf-8')] for k, v in param.items()))
                       
     def get(self, key, default='__NOT_SET__'):
         if default == '__NOT_SET__':
@@ -131,6 +139,13 @@ class Facet(object):
         self.items = []
         self.facet_set = None
 
+    @staticmethod
+    def localize_field(base_field_name, currency_code=settings.DEFAULT_CURRENCY_CODE):
+        '''
+        Generate an l10n facet field name based on currency code and a base
+        '''
+        return ''.join((base_field_name, '_', currency_code.upper()))
+
     def _pluralize(self, value):
         '''
         Primative pluralization util, used for pluralizing the label
@@ -172,12 +187,6 @@ class Facet(object):
 
     def remove(self, item):
         self.items.remove(item)
-
-    def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
-        return '<Facet: %s>' % self.field
  
     def __len__(self):
         return len(self.items)             
@@ -199,6 +208,11 @@ class Facet(object):
                 return None
             return default
 
+    def __str__(self):
+        return 'Facet: {} ({})'.format(self.field,len(self.items))
+
+    def __unicode__(self):
+        return self.__str__()
 
 class QueryFacet(Facet):
     '''
@@ -208,6 +222,12 @@ class QueryFacet(Facet):
         [* TO 500], '[500 TO 1000], '[1001 TO 2000], [2001 TO *], etc.
 
     '''
+    @staticmethod
+    def validate_range(value):
+        '''
+        Determine if the value describes a valid range query
+        '''
+        return bool(re.compile("\[.* TO .*\]").match(value))
 
     def sort_by_value(self):
         self.items = sorted(self.items, key=lambda item: self._sort_val(item.value))
@@ -235,7 +255,48 @@ class FacetItem(object):
         # Date facets might need grouping in the templates
         self.year = getattr(value, 'year', None)
  
-    def url_param(self):
+    @property
+    def url(self):
+        return self._build_url()
+
+    @property
+    def removal_url(self):
+        '''
+        Generate a url that can be used to remove the facet (ie from the
+        breadcrumb)
+        '''
+        return self._build_url(include_self=False)
+
+    @staticmethod
+    def label_from_query(query_value):
+        return query_value.replace('[', '').replace(']', '').lower()
+
+    @staticmethod
+    def price_label_from_query(query_value, currency=None):
+        if not isinstance(currency, Currency):
+            currency = Currency.objects.get(code=settings.DEFAULT_CURRENCY_CODE)
+
+        label = FacetItem.label_from_query(query_value).replace('*', str(settings.PRICE_FACET_MAX))
+
+        return ''.join((currency.symbol(),label,))
+
+    @staticmethod
+    def date_label_from_query(query_value):
+        DATE_DISPLAY_FORMAT = '%b %e, %Y'
+
+        date_range = parse_date_range(query_value)
+        if date_range:
+            return "%s to %s" % (date_range[0].strftime(DATE_DISPLAY_FORMAT), date_range[1].strftime(DATE_DISPLAY_FORMAT))
+
+        return query_value
+
+    def is_range(self):
+        '''
+        Determine if the FacetItem describes a range query
+        '''
+        return QueryFacet.validate_range(self.value)
+
+    def url_param(self, include_self=True):
         '''
         Builds a url parameter which will turn on/off
         the respective facet_item while maintaining existing
@@ -246,19 +307,22 @@ class FacetItem(object):
         including whichever named parameter it will be extracted from.
 
         e.g. '/some/path?filter=%s' % facet_item.url_param()
-        '''                              
-        return self.facet.facet_set.url_param(self)
+        '''
 
-    @property
-    def url(self):
-        url_pieces = (self.base_url, self.url_param())
+        return self.facet.facet_set.url_param(facet_item=self,include_facet_item=include_self)
+
+    def _build_url(self, include_self=True):
+        url_pieces = (self.base_url, self.url_param(include_self))
+
         if '?' in self.base_url:
             if '&' in self.base_url:
                 return '%s&%s' % url_pieces 
             return '%s%s' % url_pieces 
-        return '%s?%s' % url_pieces 
+        return '%s?%s' % url_pieces   
 
     def __unicode__(self):
         return 'FacetItem: %s (%d)' % (self.label, self.count)
 
+    def __str__(self):
+        return self.__unicode__()
          

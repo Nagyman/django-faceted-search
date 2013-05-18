@@ -58,7 +58,7 @@ def check_parse_date(value):
     return value
 
 def parse_date_range(date_range):
-    match = DATE_RANGE_REGEX.match(date_range)
+    match = is_valid_date_range(date_range)
     if match:
         data = match.groupdict()
         year, month, day = (int(data['year']), int(data['month']), int(data['day']))
@@ -68,3 +68,5 @@ def parse_date_range(date_range):
         return (start_date, end_date)
     return None
 
+def is_valid_date_range(date_range):
+    return DATE_RANGE_REGEX.match(date_range)

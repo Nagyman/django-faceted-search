@@ -1,0 +1,28 @@
+{% load faceted_search_extras %}
+{% load compress %}
+
+{% spaceless %}
+{% for facet in facets %}
+    {% if facet.has_active or facet.has_selected %}
+    {% for item in facet.items %}
+    <div id='facet-{{facet.field}}' class='min_price facet-group{% if facet.has_selected %} selected{% endif %} count-{{facet|length}}'>
+        <h4>{{ facet.label }}</h4>
+        <ul>
+            <li><a id="min_price" href="{{ item.url }}" ceid="Price Range">{{ currency.symbol }} to {{ currency.symbol }} <span id="min_price_count">({{ item.count }})</span></a></li>
+        </ul>
+        <div id="slider_min_price"></div>
+    </div>
+
+    <script>
+    var SLIDER_MIN = 0, SLIDER_MAX = {{ slider_max }};
+    var item_base_url = '{{ item.base_url }}';
+    var item_url = '{{ item.url|safe }}';
+    var item_count = '{{ item.count }}';
+    var price_field = '{{ price_field }}';
+    var price_query = '{{ item.value }}'; 
+    var currency_symbol = '{{ currency.symbol }}';
+    </script>
+    {% endfor %}
+    {% endif %}
+{% endfor %}
+{% endspaceless %}
