@@ -6,9 +6,9 @@
          {% endcomment %}
      {% else %}
         {% if item.is_selected %}
-            <li class='selected'><a href='{{ item.url }}'>{{item.label}} <span>({{item.count}})</span></a></li>
+            <li class='selected'><a href='{{ item.url }}' ceid="{{item.label}}">{{item.label}} <span>({{item.count}})</span></a></li>
         {% else %}
-            <li><a href='{{item.url}}'>{{item.label}} <span>({{item.count}})</span></a></li>
+            <li><a href='{{item.url}}' ceid="{{item.label}}">{{item.label}} <span>({{item.count}})</span></a></li>
         {% endif %}
     {%endifequal%}
 {% endfor %}
