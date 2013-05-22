@@ -16,10 +16,6 @@ HAYSTACK_CONNECTIONS = {
 # as new, and therefore reindexed.
 HAYSTACK_UPDATE_AGE = 1 
 
-# Solr settings.
-SOLR_ROOT = os.path.dirname(__file__) + '/../../../gap-solr/'
-# SOLR_SCHEMA_PATH = SOLR_ROOT + 'solr/conf/schema.xml'
-
 #TODO Facet settings should be model specific.
 FIELD_FACETS = {
     'region': {},
