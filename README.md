@@ -7,7 +7,7 @@ code were presented at a [Toronto Django Meetup](http://www.djangotoronto.com/),
 in the [Faceted Navigation with django-haystack and solr](http://www.slideshare.net/Nagyman/faceted-navigation-using-django-haystack-and-solr)
 presentation, by @Nagyman, hosted by [G Adventures](https://www.gadventures.com).
 
-Disclaimer: This code was extracted from a larger (private) code base, but was
+This code was extracted from a larger (private) code base, but was
 independently developed by Craig Nagy and subsequently maintained at G Adventures.
 
 #### TODO:
